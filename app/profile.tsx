@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, Switch, Alert } from "react-native";
 import { useState, useEffect } from "react";
-import { router } from "expo-router";
 import { getProfile, saveProfile, getSettings, saveSettings, type UserProfile, type UserSettings } from "../src/storage";
+import { goBackOrHome } from "../src/nav";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
 
 /**
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
       await saveProfile(profile);
       await saveSettings(settings);
       Alert.alert("All saved 💕", "Your profile and settings are updated.", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "OK", onPress: goBackOrHome },
       ]);
     } catch {
       Alert.alert("Oops!", "Could not save. Try again.");

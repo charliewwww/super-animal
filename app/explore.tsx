@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { goBackOrHome } from "../src/nav";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
 
 /**
@@ -36,7 +36,7 @@ export default function ExploreScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* ---- HEADER ---- */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={goBackOrHome} style={styles.backButton}>
           <Text style={styles.backArrow}>‹</Text>
         </Pressable>
         <View style={styles.headerText}>

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect, useRef, useState } from "react";
-import { router } from "expo-router";
+import { goBackOrHome } from "../src/nav";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
 import { CompanionAvatar, TalkingFox } from "../src/components/TalkingFox";
 import { converse, playReply, type VoiceEngine } from "../src/voice/client";
@@ -133,7 +133,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable onPress={goBackOrHome} style={styles.backButton}>
             <Text style={styles.backArrow}>‹</Text>
           </Pressable>
           <View style={styles.headerInfo}>
