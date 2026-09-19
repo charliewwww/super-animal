@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Super Animal",
+    "slug": "super-animal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "super-animal",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#FFF5F5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.startup.superanimal"
+    },
+    "android": {
+      "package": "com.startup.superanimal"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
