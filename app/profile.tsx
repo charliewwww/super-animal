@@ -16,7 +16,7 @@ import { colors, spacing, typography, radius, shadows } from "../src/theme";
  */
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState<UserProfile>({ nickname: "", age: "" });
+  const [profile, setProfile] = useState<UserProfile>({ nickname: "", age: "", pronouns: "" });
   const [settings, setSettings] = useState<UserSettings>({
     darkMode: false,
     soundEffects: true,
@@ -151,7 +151,21 @@ export default function ProfileScreen() {
 }
 
 // ---- SUB-COMPONENTS ----
-function Field({ label, value, onChange, placeholder, keyboardType, maxLength }: any) {
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  keyboardType,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  keyboardType?: "default" | "number-pad";
+  maxLength?: number;
+}) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -168,7 +182,21 @@ function Field({ label, value, onChange, placeholder, keyboardType, maxLength }:
   );
 }
 
-function SettingRow({ icon, label, desc, value, onChange, disabled }: any) {
+function SettingRow({
+  icon,
+  label,
+  desc,
+  value,
+  onChange,
+  disabled,
+}: {
+  icon: string;
+  label: string;
+  desc: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
     <Pressable 
       style={styles.settingRow}
@@ -198,7 +226,7 @@ function SettingRow({ icon, label, desc, value, onChange, disabled }: any) {
   );
 }
 
-function LinkRow({ icon, label, onPress }: any) {
+function LinkRow({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}

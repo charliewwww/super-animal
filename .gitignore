@@ -4,6 +4,10 @@ dist/
 .env
 .env.*
 !.env.example
+agent-tools/
+__pycache__/
+.pytest_cache/
+*.pyc
 *.log
 *.jks
 *.p8

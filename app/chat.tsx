@@ -1,19 +1,21 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
-
-/**
- * chat.tsx — 2026 modern chat
- *
- * What changed:
- *  - 2026 iMessage-style bubbles (more rounded, gradient user bubble)
- *  - Custom header with animal name + online status
- *  - Quick-reply chips (tap instead of typing)
- *  - Subtle typing indicator
- *  - Cleaner input bar (pill-shaped)
- */
+import { TalkingFox } from "../src/components/TalkingFox";
+import { converse, playReply, type VoiceEngine } from "../src/voice/client";
+import { canUseBrowserSpeech, createHoldToTalk, stopSpeaking } from "../src/voice/webSpeech";
 
 type Message = {
   id: string;
@@ -21,71 +23,107 @@ type Message = {
   fromUser: boolean;
 };
 
-const KEYWORD_REPLIES: Record<string, string[]> = {
-  sad:    ["I hear you 💙 I'm right here with you.", "It's okay to feel that. Want to talk about it?"],
-  tired:  ["Rest is also doing something 💤", "Be gentle with yourself today."],
-  angry:  ["That sounds frustrating. Let it out 💢", "Your feelings are valid."],
-  happy:  ["Love seeing you like this! 🎉", "Your joy makes me happy too 🥰"],
-  scared: ["I can feel you're worried. You're safe 🤍", "We'll get through it together."],
-  lonely: ["I'm right here. You aren't alone 🐾", "Sending you a warm hug 🤗"],
-  love:   ["Aww, I love you too 💕", "You just made my day 🥰"],
-  default: [
-    "I hear you 💕 Tell me more.",
-    "That's a big feeling. I'm here for you.",
-    "Thanks for sharing that with me.",
-    "Take a deep breath with me... in... and out 🌸",
-    "I'm proud of you for opening up.",
-  ],
-};
-
-function getMockReply(userText: string): string {
-  const lower = userText.toLowerCase();
-  for (const keyword of Object.keys(KEYWORD_REPLIES)) {
-    if (keyword !== "default" && lower.includes(keyword)) {
-      const pool = KEYWORD_REPLIES[keyword];
-      return pool[Math.floor(Math.random() * pool.length)];
-    }
-  }
-  return KEYWORD_REPLIES.default[Math.floor(Math.random() * KEYWORD_REPLIES.default.length)];
-}
-
-const QUICK_REPLIES = ["I'm sad 💙", "I'm tired 💤", "I'm happy ✨", "Tell me a joke 🌸"];
+const QUICK_REPLIES = ["I'm sad", "I'm tired", "I'm happy", "我好攰"];
 
 const INITIAL_MESSAGES: Message[] = [
-  { id: "init-1", text: "Hi! I'm so happy you're here 💕\nHow are you feeling today?", fromUser: false },
+  {
+    id: "init-1",
+    text: "Hi. I'm here with you. Hold the mic to talk, or type — I'll answer out loud.",
+    fromUser: false,
+  },
 ];
+
+const ENGINE_LABEL: Record<VoiceEngine, string> = {
+  "home-gpu": "Home GPU voice",
+  browser: "Browser voice",
+  text: "Text reply",
+};
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [talking, setTalking] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [engine, setEngine] = useState<VoiceEngine>(canUseBrowserSpeech() ? "browser" : "text");
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const holdRef = useRef<ReturnType<typeof createHoldToTalk> | null>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 80);
-  }, [messages, isTyping]);
+  }, [messages, isTyping, talking]);
 
-  function sendMessage(text?: string) {
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      holdRef.current = null;
+    };
+  }, []);
+
+  async function sendMessage(text?: string) {
     const content = (text ?? input).trim();
-    if (!content) return;
+    if (!content || isTyping || talking) return;
 
     const userMsg: Message = { id: `u-${Date.now()}`, text: content, fromUser: true };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-
+    setError(null);
     setIsTyping(true);
-    setTimeout(() => {
+
+    try {
+      const result = await converse(content);
+      setEngine(result.engine);
       const reply: Message = {
         id: `a-${Date.now()}`,
-        text: getMockReply(content),
+        text: result.reply,
         fromUser: false,
       };
       setMessages((prev) => [...prev, reply]);
       setIsTyping(false);
-    }, 900 + Math.random() * 700);
+      setTalking(true);
+      await playReply(result);
+    } catch {
+      setError("I couldn't reply just now. Try again.");
+      setIsTyping(false);
+    } finally {
+      setTalking(false);
+    }
+  }
+
+  async function beginHold() {
+    if (isTyping || talking) return;
+    if (!canUseBrowserSpeech()) {
+      Alert.alert(
+        "Mic needs Chrome",
+        "Hold-to-talk uses the browser speech API. Open this page in Chrome, allow the microphone, or type instead."
+      );
+      return;
+    }
+    try {
+      holdRef.current = createHoldToTalk();
+      holdRef.current.start();
+      setListening(true);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start the microphone.");
+    }
+  }
+
+  async function endHold() {
+    if (!holdRef.current) return;
+    const handle = holdRef.current;
+    holdRef.current = null;
+    setListening(false);
+    const transcript = (await handle.stop()).trim();
+    if (transcript) {
+      await sendMessage(transcript);
+    } else {
+      setError("I didn't catch that. Hold the mic a little longer, or type.");
+    }
   }
 
   return (
@@ -94,27 +132,30 @@ export default function ChatScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* ---- CUSTOM HEADER ---- */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backArrow}>‹</Text>
           </Pressable>
           <View style={styles.headerInfo}>
-            <View style={styles.headerAvatar}>
-              <Text style={styles.headerEmoji}>🦊</Text>
-              <View style={styles.onlineDot} />
-            </View>
             <View>
               <Text style={styles.headerName}>Your animal</Text>
               <Text style={styles.headerStatus}>
-                {isTyping ? "typing..." : "always here for you"}
+                {listening ? "listening..." : talking ? "talking..." : isTyping ? "thinking..." : "always here for you"}
               </Text>
             </View>
           </View>
-          <View style={{ width: 32 }} />
+          <View style={styles.enginePill}>
+            <Text style={styles.engineText}>{ENGINE_LABEL[engine]}</Text>
+          </View>
         </View>
 
-        {/* ---- MESSAGES ---- */}
+        <View style={styles.stage}>
+          <TalkingFox talking={talking || listening} size={150} />
+          <Text style={styles.stageCaption}>
+            {listening ? "I'm listening" : talking ? "I'm talking" : "Hold the orange mic to speak"}
+          </Text>
+        </View>
+
         <ScrollView
           ref={scrollRef}
           style={styles.messagesContainer}
@@ -134,18 +175,8 @@ export default function ChatScreen() {
                   <Text style={styles.bubbleAvatarText}>🦊</Text>
                 </View>
               )}
-              <View
-                style={[
-                  styles.bubble,
-                  msg.fromUser ? styles.bubbleUser : styles.bubbleAnimal,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.bubbleText,
-                    msg.fromUser ? styles.bubbleTextUser : styles.bubbleTextAnimal,
-                  ]}
-                >
+              <View style={[styles.bubble, msg.fromUser ? styles.bubbleUser : styles.bubbleAnimal]}>
+                <Text style={[styles.bubbleText, msg.fromUser ? styles.bubbleTextUser : styles.bubbleTextAnimal]}>
                   {msg.text}
                 </Text>
               </View>
@@ -167,7 +198,6 @@ export default function ChatScreen() {
             </View>
           )}
 
-          {/* Quick replies — only show at start */}
           {messages.length === 1 && (
             <View style={styles.quickReplies}>
               {QUICK_REPLIES.map((reply) => (
@@ -183,12 +213,23 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        {/* ---- INPUT BAR ---- */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <Pressable
+            onPressIn={beginHold}
+            onPressOut={endHold}
+            style={({ pressed }) => [
+              styles.micButton,
+              (pressed || listening) && styles.micButtonActive,
+            ]}
+          >
+            <Text style={styles.micIcon}>{listening ? "●" : "🎤"}</Text>
+          </Pressable>
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
-              placeholder="Message your animal..."
+              placeholder="Type, or hold the mic..."
               placeholderTextColor={colors.textSubtle}
               value={input}
               onChangeText={setInput}
@@ -205,7 +246,7 @@ export default function ChatScreen() {
               pressed && { opacity: 0.7, transform: [{ scale: 0.92 }] },
             ]}
             onPress={() => sendMessage()}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isTyping || talking}
           >
             <Text style={styles.sendIcon}>↑</Text>
           </Pressable>
@@ -218,8 +259,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-
-  // ---- HEADER ----
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -246,27 +285,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
   },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerEmoji: { fontSize: 20 },
-  onlineDot: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.success,
-    borderWidth: 2,
-    borderColor: colors.bg,
-  },
   headerName: {
     ...typography.h3,
     color: colors.text,
@@ -276,12 +294,30 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 1,
   },
-
-  // ---- MESSAGES ----
+  enginePill: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  engineText: {
+    ...typography.caption,
+    color: colors.primaryDark,
+  },
+  stage: {
+    alignItems: "center",
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  stageCaption: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
   messagesContainer: { flex: 1 },
   messagesContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
   bubbleRow: {
@@ -333,8 +369,6 @@ const styles = StyleSheet.create({
   bubbleTextUser: {
     color: "#FFFFFF",
   },
-
-  // ---- TYPING ----
   typingBubble: {
     paddingVertical: 16,
   },
@@ -352,14 +386,12 @@ const styles = StyleSheet.create({
   dot1: { opacity: 0.3 },
   dot2: { opacity: 0.6 },
   dot3: { opacity: 1 },
-
-  // ---- QUICK REPLIES ----
   quickReplies: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.md,
-    paddingLeft: 40,    // Align with animal bubbles
+    paddingLeft: 40,
   },
   quickChip: {
     paddingHorizontal: 14,
@@ -373,14 +405,38 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.text,
   },
-
-  // ---- INPUT BAR ----
+  errorText: {
+    ...typography.caption,
+    color: colors.danger,
+    textAlign: "center",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.sm,
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  micButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  micIcon: {
+    fontSize: 18,
+    color: "#FFFFFF",
   },
   inputWrap: {
     flex: 1,

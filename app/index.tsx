@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { getProfile, type UserProfile } from "../src/storage";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
+import { TalkingFox } from "../src/components/TalkingFox";
 
 /**
  * index.tsx — HOME (2026 redesign)
@@ -69,7 +70,7 @@ export default function HomeScreen() {
           <View style={styles.heroGlow} />
 
           <View style={styles.heroAnimal}>
-            <Text style={styles.heroEmoji}>🦊</Text>
+            <TalkingFox size={148} />
           </View>
 
           <View style={styles.heroText}>
@@ -112,7 +113,7 @@ export default function HomeScreen() {
             sub="Find calm nearby"
             tint="#E8F2EB"
             tintBorder="#C8DDD0"
-            onPress={() => Alert.alert("Coming soon!", "Explore is currently under construction.")}
+            onPress={() => router.push("/explore")}
           />
           <ActionCard
             icon="📓"
