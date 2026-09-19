@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import { colors, spacing, typography, radius, shadows } from "../src/theme";
-import { TalkingFox } from "../src/components/TalkingFox";
+import { CompanionAvatar, TalkingFox } from "../src/components/TalkingFox";
 import { converse, playReply, type VoiceEngine } from "../src/voice/client";
 import { canUseBrowserSpeech, createHoldToTalk, stopSpeaking } from "../src/voice/webSpeech";
 
@@ -150,7 +150,7 @@ export default function ChatScreen() {
         </View>
 
         <View style={styles.stage}>
-          <TalkingFox talking={talking || listening} size={150} />
+          <TalkingFox talking={talking || listening} size={210} />
           <Text style={styles.stageCaption}>
             {listening ? "I'm listening" : talking ? "I'm talking" : "Hold the orange mic to speak"}
           </Text>
@@ -171,9 +171,7 @@ export default function ChatScreen() {
               ]}
             >
               {!msg.fromUser && (
-                <View style={styles.bubbleAvatar}>
-                  <Text style={styles.bubbleAvatarText}>🦊</Text>
-                </View>
+                <CompanionAvatar size={28} />
               )}
               <View style={[styles.bubble, msg.fromUser ? styles.bubbleUser : styles.bubbleAnimal]}>
                 <Text style={[styles.bubbleText, msg.fromUser ? styles.bubbleTextUser : styles.bubbleTextAnimal]}>
@@ -185,9 +183,7 @@ export default function ChatScreen() {
 
           {isTyping && (
             <View style={[styles.bubbleRow, styles.bubbleRowAnimal]}>
-              <View style={styles.bubbleAvatar}>
-                <Text style={styles.bubbleAvatarText}>🦊</Text>
-              </View>
+              <CompanionAvatar size={28} />
               <View style={[styles.bubble, styles.bubbleAnimal, styles.typingBubble]}>
                 <View style={styles.typingDots}>
                   <View style={[styles.dot, styles.dot1]} />

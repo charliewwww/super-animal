@@ -1,18 +1,18 @@
 # Super Animal
 
-A warm Expo companion app: a fox you can talk to when you want comfort. Chat, profile, and explore are already in the app. Voice is now wired in as a same-day demo.
+A warm Expo companion app: a plush puppy you can talk to when you want comfort. Chat, profile, and explore are already in the app. Voice is now wired in as a same-day demo.
 
 Private source: [github.com/charliewwww/super-animal](https://github.com/charliewwww/super-animal)
 
 ## What works now
 
 - Home, chat, profile, and explore screens
-- A talking fox whose mouth opens and closes while it speaks
+- A talking puppy whose mouth opens and closes while it speaks
 - Hold-to-talk (Chrome / Edge) plus typed chat
 - Browser speech for today’s demo (no GPU needed)
 - Optional local FastAPI server for the home GPU PC
 
-The fox replies in English or Cantonese based on what you say. Replies are a comfort dictionary until a chat model is plugged in.
+The puppy replies in English or Cantonese based on what you say. Replies are a comfort dictionary until a chat model is plugged in.
 
 ## Run the app
 
@@ -23,7 +23,7 @@ npm run web
 
 Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Use a phone-sized window or Chrome device toolbar.
 
-Hold the orange mic to speak. If the browser blocks the microphone, type instead — the fox still talks and the mouth still moves.
+Hold the orange mic to speak. If the browser blocks the microphone, type instead — the puppy still talks and the mouth still moves.
 
 ## Voice architecture
 

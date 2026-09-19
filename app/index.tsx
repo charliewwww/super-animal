@@ -70,7 +70,7 @@ export default function HomeScreen() {
           <View style={styles.heroGlow} />
 
           <View style={styles.heroAnimal}>
-            <TalkingFox size={148} />
+            <TalkingFox size={210} />
           </View>
 
           <View style={styles.heroText}>
